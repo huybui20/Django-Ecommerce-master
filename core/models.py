@@ -44,6 +44,9 @@ class Item(models.Model):
     description_long = models.TextField()
     image = models.ImageField()
     is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)  # Ngày tạo
+    updated_at = models.DateTimeField(auto_now=True,null=True)  # Ngày cập nhật
+    last_purchased_at = models.DateTimeField(blank=True, null=True)  # Ngày mua cuối cùng
     def __str__(self):
         return self.title
 
@@ -134,6 +137,7 @@ class Order(models.Model):
         for order_item in self.items.all():
             item = order_item.item
             item.stock_no -= order_item.quantity
+            item.last_purchased_at = self.ordered_date
             item.save()
     @staticmethod
     def get_daily_revenue():
