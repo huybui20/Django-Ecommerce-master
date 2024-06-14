@@ -9,9 +9,12 @@ from django.shortcuts import redirect
 from django.utils import timezone
 from .forms import CheckoutForm, CouponForm, RefundForm, ReviewForm
 from .models import Item, OrderItem, Order, BillingAddress, Payment, Coupon, Refund, Category,  Review
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render_to_response
 
+from django.contrib.auth.mixins import UserPassesTestMixin
+import json
+from django.core.serializers.json import DjangoJSONEncoder
 # Create your views here.
 import random
 import string
@@ -427,3 +430,38 @@ class RequestRefundView(View):
             except ObjectDoesNotExist:
                 messages.info(self.request, "This order does not exist")
                 return redirect("core:request-refund")
+
+#theo dõi đơn hàng
+class OrderDeliveryView(View):
+    def get(self, request, *args, **kwargs):
+        orders = Order.objects.filter(user=request.user)
+        context = {
+            'orders': orders
+        }
+        return render(request, 'order_delivery.html', context)
+#Thong ke
+class RevenueAnalyticsView(UserPassesTestMixin, View):
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def handle_no_permission(self):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied
+
+    def get(self, request, *args, **kwargs):
+        daily_revenue = Order.get_daily_revenue()
+        monthly_revenue = Order.get_monthly_revenue()
+        item_monthly_revenue = Order.get_item_monthly_revenue()
+
+        daily_revenue_data = json.dumps(list(daily_revenue), cls=DjangoJSONEncoder)
+        monthly_revenue_data = json.dumps(list(monthly_revenue), cls=DjangoJSONEncoder)
+        item_monthly_revenue_data = json.dumps(list(item_monthly_revenue), cls=DjangoJSONEncoder)
+
+        context = {
+            'daily_revenue': daily_revenue_data,
+            'monthly_revenue': monthly_revenue_data,
+            'item_monthly_revenue': item_monthly_revenue_data,
+        }
+        if request.is_ajax():
+            return JsonResponse(context)
+        return render(request, 'revenue_analytics.html', context)

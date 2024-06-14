@@ -37,13 +37,10 @@
 						<ul class="main_menu">
 							<li>
 								<a href="/">Home</a>
-
 							</li>
-
 							<li>
 								<a href="/shop/">Shop</a>
 							</li>
-
 							{% categories %}
 
 							{% if request.user.is_authenticated %}
@@ -58,6 +55,9 @@
 							</li>
 							<li>
 								<a href="{% url 'account_logout' %}">Logout</a>
+							</li>
+							<li>
+								<a href="{% url 'core:order-delivery' %}">View Order</a>
 							</li>
 							{% else %}
 							<li>
