@@ -3,7 +3,8 @@ from django.db import models
 from django.db.models import Sum
 from django.shortcuts import reverse
 from django_countries.fields import CountryField
-
+from django.utils import timezone
+from datetime import timedelta
 
 LABEL_CHOICES = (
     ('S', 'sale'),
@@ -44,6 +45,10 @@ class Item(models.Model):
     description_long = models.TextField()
     image = models.ImageField()
     is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)  # Ngày tạo
+    updated_at = models.DateTimeField(auto_now=True)  # Ngày cập nhật
+    last_purchased_at = models.DateTimeField(blank=True, null=True)  # Ngày mua cuối cùng
+
     def __str__(self):
         return self.title
 
@@ -134,6 +139,7 @@ class Order(models.Model):
         for order_item in self.items.all():
             item = order_item.item
             item.stock_no -= order_item.quantity
+            item.last_purchased_at = self.ordered_date
             item.save()
 
 class BillingAddress(models.Model):
