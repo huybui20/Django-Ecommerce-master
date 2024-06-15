@@ -1,4 +1,5 @@
 from django import forms
+from .models import Profile
 from django_countries.fields import CountryField
 from django_countries.widgets import CountrySelectWidget
 from .models import Review
@@ -7,6 +8,10 @@ PAYMENT_CHOICES = (
     ('P', 'PayPal')
 )
 
+class ProfileForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ['avatar', 'bio']
 
 class CheckoutForm(forms.Form):
     street_address = forms.CharField(widget=forms.TextInput(attrs={
@@ -43,7 +48,7 @@ class RefundForm(forms.Form):
         'rows': 4
     }))
     email = forms.EmailField()
-    
+
 class ReviewForm(forms.ModelForm):
     class Meta:
         model = Review
