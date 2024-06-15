@@ -20,12 +20,6 @@
 	}
 </style>
 
-<!-- Title Page -->
-<section class="bg-title-page p-t-50 p-b-40 flex-col-c-m" style="background-image: url({% static 'images/heading-pages-02.webp' %});">
-	<h2 class="l-text2 t-center">
-		Profile
-	</h2>
-</section>
 
 <!-- Content page -->
 <section class="bgwhite p-t-55 p-b-65">
@@ -63,23 +57,7 @@
 					<form method="post" enctype="multipart/form-data" class="w-100">
 						{% csrf_token %}
 						<div class="form-group">
-							<label for="username" class="m-text14 p-b-7">Username:</label>
-							{% render_field form.username class="form-control" %}
-						</div>
-						<div class="form-group">
-							<label for="email" class="m-text14 p-b-7">Email:</label>
-							{% render_field form.email class="form-control" %}
-						</div>
-						<div class="form-group">
-							<label for="first_name" class="m-text14 p-b-7">First Name:</label>
-							{% render_field form.first_name class="form-control" %}
-						</div>
-						<div class="form-group">
-							<label for="last_name" class="m-text14 p-b-7">Last Name:</label>
-							{% render_field form.last_name class="form-control" %}
-						</div>
-						<div class="form-group">
-							<label for="avatar" class="m-text14 p-b-7">Avatar:</label>
+							<label for="avatar" class="m-text14 p-b-7">Change Avatar:</label>
 							{% render_field form.avatar class="form-control-file" %}
 						</div>
 						<button type="submit" class="btn btn-primary">Lưu thay đổi</button>

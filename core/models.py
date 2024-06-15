@@ -6,8 +6,8 @@ from django.shortcuts import reverse
 from django_countries.fields import CountryField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-
-
+from django.db.models import Sum, F, FloatField, ExpressionWrapper
+from django.db.models.functions import TruncDay, TruncMonth
 LABEL_CHOICES = (
     ('S', 'sale'),
     ('N', 'new'),
@@ -55,6 +55,9 @@ class Item(models.Model):
     description_long = models.TextField()
     image = models.ImageField()
     is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)  # Ngày tạo
+    updated_at = models.DateTimeField(auto_now=True,null=True)  # Ngày cập nhật
+    last_purchased_at = models.DateTimeField(blank=True, null=True)  # Ngày mua cuối cùng
     def __str__(self):
         return self.title
 
@@ -145,7 +148,60 @@ class Order(models.Model):
         for order_item in self.items.all():
             item = order_item.item
             item.stock_no -= order_item.quantity
+            item.last_purchased_at = self.ordered_date
             item.save()
+    @staticmethod
+    def get_daily_revenue():
+        daily_revenue = Order.objects.filter(
+            ordered=True
+        ).annotate(
+            day=TruncDay('ordered_date')
+        ).values(
+            'day'
+        ).annotate(
+            total_revenue=Sum(
+                ExpressionWrapper(
+                    F('items__quantity') * F('items__item__price'),
+                    output_field=FloatField()
+                )
+            )
+        ).order_by('day')
+        return daily_revenue
+
+    @staticmethod
+    def get_monthly_revenue():
+        monthly_revenue = Order.objects.filter(
+            ordered=True
+        ).annotate(
+            month=TruncMonth('ordered_date')
+        ).values(
+            'month'
+        ).annotate(
+            total_revenue=Sum(
+                ExpressionWrapper(
+                    F('items__quantity') * F('items__item__price'),
+                    output_field=FloatField()
+                )
+            )
+        ).order_by('month')
+        return monthly_revenue
+    @staticmethod
+    def get_item_monthly_revenue():
+        item_monthly_revenue = OrderItem.objects.filter(
+            order__ordered=True
+        ).annotate(
+            month=TruncMonth('order__ordered_date')
+        ).values(
+            'month', 'item__title'
+        ).annotate(
+            total_revenue=Sum(
+                ExpressionWrapper(
+                    F('quantity') * F('item__price'),
+                    output_field=FloatField()
+                )
+            )
+        ).order_by('month', 'item__title')
+        return item_monthly_revenue
 
 class BillingAddress(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
