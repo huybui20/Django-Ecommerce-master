@@ -4,17 +4,18 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render, get_object_or_404
-from django.views.generic import ListView, DetailView, View
-from django.shortcuts import redirect
+from django.views.generic import ListView, DetailView, View, UpdateView
+from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 from .forms import CheckoutForm, CouponForm, RefundForm, ReviewForm
 from .models import Item, OrderItem, Order, BillingAddress, Payment, Coupon, Refund, Category,  Review
-from django.http import HttpResponseRedirect, JsonResponse
+from django.http import HttpResponseRedirect
 from django.shortcuts import render_to_response
+from .forms import ProfileForm
+from .models import Profile
 
-from django.contrib.auth.mixins import UserPassesTestMixin
-import json
-from django.core.serializers.json import DjangoJSONEncoder
+
 # Create your views here.
 import random
 import string
@@ -63,7 +64,7 @@ class PaymentView(View):
             order.payment = payment
             # TODO : assign ref code
             order.ref_code = create_ref_code()
-            
+
             #Update stock no
             order.update_stock_no()
 
@@ -134,12 +135,12 @@ class ShopView(ListView):
     model = Item
     paginate_by = 6
     template_name = "shop.html"
-    
-    
+
+
 class SearchView(ListView):
     model = Item
     paginate_by = 6
-    template_name = "search.html"  
+    template_name = "search.html"
     def get_queryset(self):
         queryset = super().get_queryset()
         query = self.request.GET.get('q')
@@ -182,7 +183,7 @@ class ItemDetailView(View):
                 review.date_created = timezone.now()
                 review.save()
                 return redirect("core:product", slug=select_item.slug)
-            else: 
+            else:
                 messages.info(self.request, "You must log in to leave a review")
         return render(self.request, "product-detail.html", context)
 class CategoryView(View):
@@ -231,7 +232,7 @@ class CheckoutView(View):
                     if (order_item.quantity) > order_item.item.stock_no:
                         messages.warning(self.request, f"Insufficient stock for {order_item.item.title}. Available: {order_item.item.stock_no}")
                         return redirect('core:checkout')
-                    
+
                 street_address = form.cleaned_data.get('street_address')
                 apartment_address = form.cleaned_data.get('apartment_address')
                 country = form.cleaned_data.get('country')
@@ -308,6 +309,19 @@ def add_to_cart(request, slug):
     else:
         messages.info(request, "Not enough item in stock")
         return redirect("core:product", slug=slug)
+
+@method_decorator(login_required, name='dispatch')
+class ProfileView(UpdateView):
+    model = Profile
+    form_class = ProfileForm
+    template_name = 'view_profile.html'
+    success_url = '/profile/'
+
+    def get_object(self):
+        profile, created = Profile.objects.get_or_create(user=self.request.user)
+        return profile
+
+view_profile = ProfileView.as_view()
 
 @login_required
 def remove_from_cart(request, slug):
@@ -430,38 +444,3 @@ class RequestRefundView(View):
             except ObjectDoesNotExist:
                 messages.info(self.request, "This order does not exist")
                 return redirect("core:request-refund")
-
-#theo dõi đơn hàng
-class OrderDeliveryView(View):
-    def get(self, request, *args, **kwargs):
-        orders = Order.objects.filter(user=request.user)
-        context = {
-            'orders': orders
-        }
-        return render(request, 'order_delivery.html', context)
-#Thong ke
-class RevenueAnalyticsView(UserPassesTestMixin, View):
-    def test_func(self):
-        return self.request.user.is_staff
-
-    def handle_no_permission(self):
-        from django.core.exceptions import PermissionDenied
-        raise PermissionDenied
-
-    def get(self, request, *args, **kwargs):
-        daily_revenue = Order.get_daily_revenue()
-        monthly_revenue = Order.get_monthly_revenue()
-        item_monthly_revenue = Order.get_item_monthly_revenue()
-
-        daily_revenue_data = json.dumps(list(daily_revenue), cls=DjangoJSONEncoder)
-        monthly_revenue_data = json.dumps(list(monthly_revenue), cls=DjangoJSONEncoder)
-        item_monthly_revenue_data = json.dumps(list(item_monthly_revenue), cls=DjangoJSONEncoder)
-
-        context = {
-            'daily_revenue': daily_revenue_data,
-            'monthly_revenue': monthly_revenue_data,
-            'item_monthly_revenue': item_monthly_revenue_data,
-        }
-        if request.is_ajax():
-            return JsonResponse(context)
-        return render(request, 'revenue_analytics.html', context)

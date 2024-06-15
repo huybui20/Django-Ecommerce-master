@@ -1,9 +1,12 @@
 from django.conf import settings
 from django.db import models
-from django.db.models import Sum, F, FloatField, ExpressionWrapper
+from django.contrib.auth.models import User
+from django.db.models import Sum
 from django.shortcuts import reverse
 from django_countries.fields import CountryField
-from django.db.models.functions import TruncDay, TruncMonth
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
 
 LABEL_CHOICES = (
     ('S', 'sale'),
@@ -15,6 +18,14 @@ ADDRESS_CHOICES = (
     ('B', 'Billing'),
     ('S', 'Shipping'),
 )
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+    bio = models.TextField(max_length=500, blank=True)
+
+    def __str__(self):
+        return f'Profile của {self.user.username}'
 
 class Category(models.Model):
     title = models.CharField(max_length=100)
@@ -30,7 +41,7 @@ class Category(models.Model):
         return reverse("core:category", kwargs={
             'slug': self.slug
         })
-    
+
 class Item(models.Model):
     title = models.CharField(max_length=100)
     price = models.FloatField()
@@ -44,9 +55,6 @@ class Item(models.Model):
     description_long = models.TextField()
     image = models.ImageField()
     is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True, null=True)  # Ngày tạo
-    updated_at = models.DateTimeField(auto_now=True,null=True)  # Ngày cập nhật
-    last_purchased_at = models.DateTimeField(blank=True, null=True)  # Ngày mua cuối cùng
     def __str__(self):
         return self.title
 
@@ -54,7 +62,7 @@ class Item(models.Model):
         return reverse("core:product", kwargs={
             'slug': self.slug
         })
- 
+
     def get_add_to_cart_url(self):
         return reverse("core:add-to-cart", kwargs={
             'slug': self.slug
@@ -132,66 +140,12 @@ class Order(models.Model):
         if self.coupon:
             total -= self.coupon.amount
         return total
-    
+
     def update_stock_no(self):
         for order_item in self.items.all():
             item = order_item.item
             item.stock_no -= order_item.quantity
-            item.last_purchased_at = self.ordered_date
             item.save()
-    @staticmethod
-    def get_daily_revenue():
-        daily_revenue = Order.objects.filter(
-            ordered=True
-        ).annotate(
-            day=TruncDay('ordered_date')
-        ).values(
-            'day'
-        ).annotate(
-            total_revenue=Sum(
-                ExpressionWrapper(
-                    F('items__quantity') * F('items__item__price'),
-                    output_field=FloatField()
-                )
-            )
-        ).order_by('day')
-        return daily_revenue
-
-    @staticmethod
-    def get_monthly_revenue():
-        monthly_revenue = Order.objects.filter(
-            ordered=True
-        ).annotate(
-            month=TruncMonth('ordered_date')
-        ).values(
-            'month'
-        ).annotate(
-            total_revenue=Sum(
-                ExpressionWrapper(
-                    F('items__quantity') * F('items__item__price'),
-                    output_field=FloatField()
-                )
-            )
-        ).order_by('month')
-        return monthly_revenue
-    @staticmethod
-    def get_item_monthly_revenue():
-        item_monthly_revenue = OrderItem.objects.filter(
-            order__ordered=True
-        ).annotate(
-            month=TruncMonth('order__ordered_date')
-        ).values(
-            'month', 'item__title'
-        ).annotate(
-            total_revenue=Sum(
-                ExpressionWrapper(
-                    F('quantity') * F('item__price'),
-                    output_field=FloatField()
-                )
-            )
-        ).order_by('month', 'item__title')
-        return item_monthly_revenue
-
 
 class BillingAddress(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
@@ -244,4 +198,3 @@ class Review(models.Model):
     date_created = models.DateTimeField(auto_now_add=True, null=True)
     def __str__(self):
         return self.content
-        
