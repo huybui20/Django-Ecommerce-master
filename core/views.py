@@ -136,7 +136,27 @@ class ShopView(ListView):
     model = Item
     paginate_by = 6
     template_name = "shop.html"
+    def get_queryset(self):
+        queryset = super().get_queryset().filter(is_active=True)
+        sorting_price = self.request.GET.get('sorting-price')
+        sorting_title = self.request.GET.get('sorting-title')
 
+        if sorting_price == 'price_low_to_high':
+            queryset = queryset.order_by('price')
+        elif sorting_price == 'price_high_to_low':
+            queryset = queryset.order_by('-price')
+        
+        if sorting_title == 'name_asc':
+            queryset = queryset.order_by('title')
+        elif sorting_title == 'name_desc':
+            queryset = queryset.order_by('-title')
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add any additional context if necessary
+        return context
 
 class SearchView(ListView):
     model = Item
@@ -187,24 +207,43 @@ class ItemDetailView(View):
             else:
                 messages.info(self.request, "You must log in to leave a review")
         return render(self.request, "product-detail.html", context)
-class CategoryView(View):
-    def get(self, *args, **kwargs):
-        category = Category.objects.get(slug=self.kwargs['slug'])
-        item = Item.objects.filter(category=category, is_active=True)
-        context = {
-            'object_list': item,
-            'category_title': category,
-            'category_description': category.description,
-            'category_image': category.image
-        }
-        return render(self.request, "category.html", context)
+    
+class CategoryView(ListView):
+    model = Item
+    template_name = 'category.html'
+    context_object_name = 'object_list'
+    paginate_by = 10
     def get_queryset(self):
         queryset = super().get_queryset()
-        query = self.request.GET.get('q')
-        if query:
-            queryset = queryset.filter(title__icontains=query)
+        category_slug = self.kwargs.get('slug')
+        category = Category.objects.get(slug=category_slug)
+        sorting_price = self.request.GET.get('sorting-price')
+        sorting_title = self.request.GET.get('sorting-title')
+
+        if sorting_price == 'price_low_to_high':
+            queryset = queryset.filter(category=category, is_active=True).order_by('price')
+        elif sorting_price == 'price_high_to_low':
+            queryset = queryset.filter(category=category, is_active=True).order_by('-price')
+        else:
+            queryset = queryset.filter(category=category, is_active=True)
+            
+        if sorting_title == 'name_asc':
+            queryset = queryset.order_by('title')  # Sắp xếp theo tên từ A-Z
+        elif sorting_title == 'name_desc':
+            queryset = queryset.order_by('-title')
+        else:
+            queryset = queryset.filter(category=category, is_active=True)
+
         return queryset
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        category_slug = self.kwargs.get('slug')
+        category = Category.objects.get(slug=category_slug)
+        context['category_title'] = category.title
+        context['category_description'] = category.description
+        context['category_image'] = category.image
+        return context
 class CheckoutView(View):
     def get(self, *args, **kwargs):
         try:

@@ -136,29 +136,25 @@
 					<div class="flex-sb-m flex-w p-b-35">
 						<div class="flex-w">
 						
-							<div class="rs2-select2 bo4 of-hidden w-size12 m-t-5 m-b-5 m-r-10" >
-								<select class="selection-2" name="sorting">
-									<option>Default Sorting</option>
-									<option>Popularity</option>
-									<option>Price: low to high</option>
-									<option>Price: high to low</option>
+							<div class="rs2-select2 bo4 of-hidden w-size12 m-t-5 m-b-5 m-r-10">
+								<select id="sort-select-price" class="selection-2" name="sorting-price">
+									<option value="">Giá</option>
+									<option value="price_low_to_high">Price: low to high</option>
+									<option value="price_high_to_low">Price: high to low</option>
 								</select>
 							</div>
 
 							<div class="rs2-select2 bo4 of-hidden w-size12 m-t-5 m-b-5 m-r-10">
-								<select class="selection-2" name="sorting">
-									<option>Price</option>
-									<option>$0.00 - $50.00</option>
-									<option>$50.00 - $100.00</option>
-									<option>$100.00 - $150.00</option>
-									<option>$150.00 - $200.00</option>
-									<option>$200.00+</option>
+								<select id="sort-select-title" class="selection-2" name="sorting-title">
+									<option value="">Tên</option>
+									<option value="name_asc">Tên: A-Z</option>
+									<option value="name_desc">Tên: Z-A</option>
 								</select>
 							</div>
 
 							<form class="form-inline" method="GET" action="{% url 'core:search' %}">
 								<div class="md-form my-0">
-								  <input class="form-control mr-sm-2" type="text" placeholder="Search" aria-label="Search" name="q">
+								  <input class="form-control mr-sm-2" type="text" placeholder="Nhập tên sản phẩm" aria-label="Search" name="q">
 								</div>
 								<button class="btn btn-outline-white btn-md my-0 ml-sm-2" type="submit">Search</button>
 							</form>
@@ -218,20 +214,39 @@
 		</div>
 	</section>
 	<script>
-		document.getElementById('filterButton').addEventListener('click', function() {
-		var rangeValue = document.getElementById('range').value;
+		document.addEventListener('DOMContentLoaded', function() {
+			var sortSelect = document.getElementById('sort-select-price');
 	
-		document.getElementById('current-value').textContent = rangeValue;
+			sortSelect.addEventListener('change', function() {
+				var selectedValue = sortSelect.value;
+				var url = window.location.href.split('?')[0]; // Lấy URL hiện tại và bỏ đi query string
+	
+				// Thêm tham số sắp xếp vào URL
+				if (selectedValue) {
+					url += '?sorting-price=' + selectedValue;
+				}
+	
+				// Chuyển hướng đến URL mới
+				window.location.href = url;
+			});
 		});
+
+		document.addEventListener('DOMContentLoaded', function() {
+			var sortSelect = document.getElementById('sort-select-title');
 	
-		// Update the displayed value as the slider is moved.
-		document.getElementById('range').addEventListener('input', function() {
-			document.getElementById('current-value').textContent = this.value;
+			sortSelect.addEventListener('change', function() {
+				var selectedValue = sortSelect.value;
+				var url = window.location.href.split('?')[0]; // Lấy URL hiện tại và bỏ đi query string
+	
+				// Thêm tham số sắp xếp vào URL
+				if (selectedValue) {
+					url += '?sorting-title=' + selectedValue;
+				}
+	
+				// Chuyển hướng đến URL mới
+				window.location.href = url;
+			});
 		});
-	
-		// Initialize the displayed value
-		document.getElementById('current-value').textContent = document.getElementById('range').value;
-	
 	</script>
 
 		{% endblock content %}
